@@ -1,0 +1,179 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-surface-dim text-on-surface font-sans antialiased;
+  }
+
+  ::selection {
+    @apply bg-primary/30;
+  }
+
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-surface-container;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-surface-container-high rounded-sm;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-surface-container-highest;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply bg-surface-container-high/30 backdrop-blur-xl;
+  }
+
+  .btn-primary {
+    @apply relative overflow-hidden bg-gradient-to-br from-primary to-primary-container text-on-primary font-semibold 
+           px-6 py-2.5 rounded-md transition-all duration-200 hover:brightness-105 active:brightness-95;
+  }
+
+  .btn-secondary {
+    @apply bg-transparent border border-surface-container-high text-on-surface px-6 py-2.5 rounded-md 
+           transition-all duration-200 hover:bg-surface-container-high;
+  }
+
+  .input-field {
+    @apply bg-surface-lowest border border-transparent rounded-md px-4 py-3 
+           text-on-surface placeholder:text-on-surface-variant/50
+           focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none
+           transition-all duration-200;
+  }
+
+  .card {
+    @apply bg-surface-container-low rounded-lg p-6;
+  }
+
+  .card-elevated {
+    @apply bg-surface-container rounded-lg p-6 shadow-ambient;
+  }
+
+  .glass-panel {
+    @apply bg-surface-container-highest/30 backdrop-blur-xl rounded-lg p-4;
+  }
+
+  .text-display {
+    @apply font-display font-bold tracking-tight;
+  }
+
+  .text-mono {
+    @apply font-mono text-xs;
+  }
+
+  .gradient-primary {
+    @apply bg-gradient-to-br from-primary to-primary-container;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+@layer base {
+  pre, code {
+    @apply font-mono;
+  }
+
+  pre {
+    @apply bg-surface-lowest rounded-md p-4 overflow-x-auto;
+  }
+
+  code {
+    @apply bg-surface-container px-1.5 py-0.5 rounded text-sm;
+  }
+
+  pre code {
+    @apply bg-transparent p-0;
+  }
+
+  .prose {
+    @apply text-on-surface leading-relaxed;
+  }
+
+  .prose h1 {
+    @apply font-display text-3xl font-bold mt-8 mb-4;
+  }
+
+  .prose h2 {
+    @apply font-display text-2xl font-semibold mt-6 mb-3;
+  }
+
+  .prose h3 {
+    @apply font-display text-xl font-semibold mt-4 mb-2;
+  }
+
+  .prose p {
+    @apply mb-4;
+  }
+
+  .prose ul, .prose ol {
+    @apply mb-4 pl-6;
+  }
+
+  .prose li {
+    @apply mb-2;
+  }
+
+  .prose pre {
+    @apply my-4;
+  }
+
+  .prose code {
+    @apply text-primary;
+  }
+
+  .prose a {
+    @apply text-primary hover:underline;
+  }
+}
