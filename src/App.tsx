@@ -78,7 +78,7 @@ function App() {
     setEditingInstance(null)
     
     if (enableStorage && newConfig.id) {
-      setStoredIds(prev => new Set([...prev, newConfig.id!]))
+      setStoredIds(prev => new Set([...prev, newConfig.id]))
       const allInstances = useLLMStore.getState().instances
       const currentActiveId = useLLMStore.getState().activeId
       await saveToIndexedDB(allInstances, currentActiveId)
@@ -209,17 +209,18 @@ function App() {
             ) : (
               <div className="space-y-2">
                 {Object.values(instances).map((instance) => {
-                  const state = instanceStates[instance.id!] || { status: 'idle' }
+                  if (!instance.id) return null
+                  const state = instanceStates[instance.id] || { status: 'idle' }
                   return (
                     <InstanceCard
                       key={instance.id}
                       instance={instance}
                       state={state}
-                      isStored={storedIds.has(instance.id!)}
-                      isSelected={selectedIds.has(instance.id!)}
-                      onToggleSelect={() => handleToggleSelect(instance.id!)}
+                      isStored={storedIds.has(instance.id)}
+                      isSelected={selectedIds.has(instance.id)}
+                      onToggleSelect={() => handleToggleSelect(instance.id)}
                       onEdit={() => handleEditInstance(instance)}
-                      onDelete={() => handleRemoveInstance(instance.id!)}
+                      onDelete={() => handleRemoveInstance(instance.id)}
                       onShowError={(message) => handleShowError(message, instance.name || instance.id)}
                     />
                   )

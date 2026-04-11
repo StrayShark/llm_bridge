@@ -1,19 +1,20 @@
-export { openaiProvider } from './openai.js'
-export { deepseekProvider } from './deepseek.js'
-export { kimiProvider } from './kimi.js'
-export { qwenProvider } from './qwen.js'
-export { minimaxProvider } from './minimax.js'
-export { zhipuProvider } from './zhipu.js'
-export { createCustomProvider, type CustomProviderConfig } from './custom.js'
+export { openaiProvider } from './openai'
+export { deepseekProvider } from './deepseek'
+export { kimiProvider } from './kimi'
+export { qwenProvider } from './qwen'
+export { minimaxProvider } from './minimax'
+export { zhipuProvider } from './zhipu'
+export { createCustomProvider, type CustomProviderConfig } from './custom'
+export { PROVIDERS, getProvider, getProviders, getModels, type ProviderConfig, type ModelConfig, ProviderEnum } from './config'
 
-import { openaiProvider } from './openai.js'
-import { deepseekProvider } from './deepseek.js'
-import { kimiProvider } from './kimi.js'
-import { qwenProvider } from './qwen.js'
-import { minimaxProvider } from './minimax.js'
-import { zhipuProvider } from './zhipu.js'
-import { createCustomProvider } from './custom.js'
-import type { ProviderAdapter } from '../core/types.js'
+import { openaiProvider } from './openai'
+import { deepseekProvider } from './deepseek'
+import { kimiProvider } from './kimi'
+import { qwenProvider } from './qwen'
+import { minimaxProvider } from './minimax'
+import { zhipuProvider } from './zhipu'
+import { createCustomProvider } from './custom'
+import type { ProviderAdapter } from '../core/types'
 
 export const providers: Record<string, ProviderAdapter> = {
   openai: openaiProvider,
@@ -29,6 +30,6 @@ export function registerProvider(name: string, provider: ProviderAdapter) {
   providers[name] = provider
 }
 
-export function getProvider(name: string): ProviderAdapter | undefined {
+export function getProviderAdapter(name: string): ProviderAdapter | undefined {
   return providers[name]
 }

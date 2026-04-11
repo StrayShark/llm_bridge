@@ -29,10 +29,11 @@ export default function MultiChatPanel({ selectedInstances, onStream }: MultiCha
 
   useEffect(() => {
     selectedInstances.forEach(inst => {
-      if (!allSessions[inst.id!]) {
+      if (!inst.id) return
+      if (!allSessions[inst.id]) {
         setAllSessions(prev => ({
           ...prev,
-          [inst.id!]: { messages: [], streamContent: '', isStreaming: false }
+          [inst.id]: { messages: [], streamContent: '', isStreaming: false }
         }))
       }
     })
@@ -40,7 +41,9 @@ export default function MultiChatPanel({ selectedInstances, onStream }: MultiCha
 
   useEffect(() => {
     selectedInstances.forEach(inst => {
-      scrollToBottom(inst.id!)
+      if (inst.id) {
+        scrollToBottom(inst.id)
+      }
     })
   }, [allSessions, selectedInstances])
 
@@ -52,9 +55,10 @@ export default function MultiChatPanel({ selectedInstances, onStream }: MultiCha
     setAllSessions(prev => {
       const updated: Record<string, any> = {}
       selectedInstances.forEach(inst => {
-        updated[inst.id!] = {
-          ...prev[inst.id!],
-          messages: [...(prev[inst.id!]?.messages || []), userMessage],
+        if (!inst.id) return
+        updated[inst.id] = {
+          ...prev[inst.id],
+          messages: [...(prev[inst.id]?.messages || []), userMessage],
           streamContent: '',
           isStreaming: true
         }
@@ -65,26 +69,28 @@ export default function MultiChatPanel({ selectedInstances, onStream }: MultiCha
     setInput('')
 
     const streamPromises = selectedInstances.map(async (instance) => {
+      if (!instance.id) return
+      const instanceId = instance.id
       let fullContent = ''
       try {
-        for await (const chunk of onStream(instance.id!, input)) {
+        for await (const chunk of onStream(instanceId, input)) {
           fullContent += chunk
           setAllSessions(prev => ({
             ...prev,
-            [instance.id!]: {
-              ...prev[instance.id!],
+            [instanceId]: {
+              ...prev[instanceId],
               streamContent: fullContent
             }
           }))
-          scrollToBottom(instance.id!)
+          scrollToBottom(instanceId)
         }
 
         const assistantMessage: Message = { role: 'assistant', content: fullContent, timestamp: new Date() }
         setAllSessions(prev => ({
           ...prev,
-          [instance.id!]: {
-            ...prev[instance.id!],
-            messages: [...prev[instance.id!].messages, assistantMessage],
+          [instanceId]: {
+            ...prev[instanceId],
+            messages: [...(prev[instanceId]?.messages || []), assistantMessage],
             streamContent: '',
             isStreaming: false
           }
@@ -93,9 +99,9 @@ export default function MultiChatPanel({ selectedInstances, onStream }: MultiCha
         const errorMessage: Message = { role: 'assistant', content: `错误: ${error.message}`, timestamp: new Date() }
         setAllSessions(prev => ({
           ...prev,
-          [instance.id!]: {
-            ...prev[instance.id!],
-            messages: [...prev[instance.id!].messages, errorMessage],
+          [instanceId]: {
+            ...prev[instanceId],
+            messages: [...(prev[instanceId]?.messages || []), errorMessage],
             streamContent: '',
             isStreaming: false
           }
@@ -113,7 +119,7 @@ export default function MultiChatPanel({ selectedInstances, onStream }: MultiCha
     }
   }
 
-  const isStreaming = selectedInstances.some(id => allSessions[id.id!]?.isStreaming)
+  const isStreaming = selectedInstances.some(inst => inst.id && allSessions[inst.id]?.isStreaming)
 
   return (
     <div className="flex flex-col h-full bg-surface-container">
@@ -127,7 +133,8 @@ export default function MultiChatPanel({ selectedInstances, onStream }: MultiCha
         ) : (
           <div className="grid grid-cols-2 gap-4 p-4">
             {selectedInstances.map((instance) => {
-              const session = allSessions[instance.id!] || { messages: [], streamContent: '', isStreaming: false }
+              if (!instance.id) return null
+              const session = allSessions[instance.id] || { messages: [], streamContent: '', isStreaming: false }
               return (
                 <div key={instance.id} className="flex flex-col bg-surface-container-low rounded-lg h-[600px] border border-surface-container-high">
                   <div className="px-4 py-3 bg-surface-container shrink-0 h-14 rounded-t-lg">
@@ -166,7 +173,7 @@ export default function MultiChatPanel({ selectedInstances, onStream }: MultiCha
                       </div>
                     )}
 
-                    <div ref={(el) => { messagesEndRefs.current[instance.id!] = el }} />
+                    <div ref={(el) => { messagesEndRefs.current[instance.id] = el }} />
                   </div>
                 </div>
               )

@@ -1,5 +1,5 @@
-import type { LLMConfig, GenerateOptions, GenerateResult, ProviderAdapter } from './types.js'
-import { getProvider } from '../provider/index.js'
+import type { LLMConfig, GenerateOptions, GenerateResult, ProviderAdapter } from './types'
+import { getProviderAdapter } from '../provider/index'
 
 export interface LLMInstance {
   generate(options: GenerateOptions): Promise<GenerateResult>
@@ -48,7 +48,7 @@ async function fetchWithTimeout(url: string, options: RequestInit, timeout: numb
 }
 
 export function createLLM(config: LLMConfig): LLMInstance {
-  const adapter: ProviderAdapter = config.adapter || getProvider(config.provider) || getProvider('custom')!
+  const adapter: ProviderAdapter = config.adapter || getProviderAdapter(config.provider) || getProviderAdapter('custom')!
 
   async function generate(options: GenerateOptions): Promise<GenerateResult> {
     const endpoint = getEndpoint(config.provider, config.baseURL)

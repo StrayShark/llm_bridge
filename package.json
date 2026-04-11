@@ -1,13 +1,40 @@
 {
-  "name": "llm-bridge",
-  "version": "0.1.0",
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "llm-bridge-sdk",
+  "version": "0.0.1",
   "type": "module",
-  "description": "Browser-first LLM SDK + Playground",
+  "description": "轻量级 LLM API 调用工具，支持多种 Provider",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "npm run build:sdk && vite build",
+    "build:sdk": "tsc -p tsconfig.sdk.json",
     "preview": "vite preview"
   },
+  "keywords": [
+    "llm",
+    "openai",
+    "deepseek",
+    "kimi",
+    "qwen",
+    "minimax",
+    "zhipu",
+    "ai",
+    "chatgpt"
+  ],
+  "author": "",
+  "license": "MIT",
   "dependencies": {
     "lucide-react": "^1.8.0",
     "react": "^18.2.0",

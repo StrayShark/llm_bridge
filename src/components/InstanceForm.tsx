@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Button, Input, Select, Switch } from './ui'
 import type { LLMConfig } from '../core/types'
+import { PROVIDERS, getModels } from '../provider/config'
 
 interface InstanceFormProps {
   instance?: LLMConfig | null
@@ -8,63 +9,26 @@ interface InstanceFormProps {
   onCancel: () => void
 }
 
-const PROVIDERS = [
-  { value: 'openai', label: 'OpenAI' },
-  { value: 'deepseek', label: 'DeepSeek' },
-  { value: 'kimi', label: 'Kimi (Moonshot)' },
-  { value: 'qwen', label: 'Qwen (阿里云百炼)' },
-  { value: 'minimax', label: 'MiniMax' },
-  { value: 'zhipu', label: '智谱AI (GLM)' },
-  { value: 'custom', label: '自定义' }
-]
-
-const MODELS: Record<string, Array<{ value: string; label: string }>> = {
-  openai: [
-    { value: 'gpt-4', label: 'GPT-4' },
-    { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
-    { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' }
-  ],
-  deepseek: [
-    { value: 'deepseek-chat', label: 'DeepSeek Chat' },
-    { value: 'deepseek-coder', label: 'DeepSeek Coder' }
-  ],
-  kimi: [
-    { value: 'moonshot-v1-8k', label: 'Moonshot V1-8K' },
-    { value: 'moonshot-v1-32k', label: 'Moonshot V1-32K' },
-    { value: 'moonshot-v1-128k', label: 'Moonshot V1-128K' },
-    { value: 'kimi-k2.5', label: 'Kimi K2.5' }
-  ],
-  qwen: [
-    { value: 'qwen-plus', label: 'Qwen Plus' },
-    { value: 'qwen-turbo', label: 'Qwen Turbo' },
-    { value: 'qwen-max', label: 'Qwen Max' },
-    { value: 'qwen-long', label: 'Qwen Long' }
-  ],
-  minimax: [
-    { value: 'MiniMax-M2.5', label: 'MiniMax-M2.5' },
-    { value: 'MiniMax-M2.7', label: 'MiniMax-M2.7' }
-  ],
-  zhipu: [
-    { value: 'glm-4-plus', label: 'GLM-4 Plus' },
-    { value: 'glm-4', label: 'GLM-4' },
-    { value: 'glm-4-air', label: 'GLM-4 Air' },
-    { value: 'glm-4-airx', label: 'GLM-4 AirX' },
-    { value: 'glm-4-long', label: 'GLM-4 Long' },
-    { value: 'glm-4-flashx', label: 'GLM-4 FlashX' },
-    { value: 'glm-4-flash', label: 'GLM-4 Flash' }
-  ],
-  custom: []
-}
+const providerOptions = PROVIDERS.map(p => ({
+  value: p.id,
+  label: p.name
+}))
 
 export default function InstanceForm({ instance, onSubmit, onCancel }: InstanceFormProps) {
   const [provider, setProvider] = useState(instance?.provider || 'openai')
-  const [model, setModel] = useState(instance?.model || 'gpt-3.5-turbo')
+  const [model, setModel] = useState(instance?.model || '')
   const [apiKey, setApiKey] = useState(instance?.apiKey || '')
   const [name, setName] = useState(instance?.name || '')
   const [customModel, setCustomModel] = useState(instance?.model || '')
   const [customBaseURL, setCustomBaseURL] = useState(instance?.baseURL || '')
   const [proxy, setProxy] = useState(instance?.proxy || '')
   const [enableStorage, setEnableStorage] = useState(true)
+
+  const currentModels = getModels(provider)
+  const modelOptions: Array<{ value: string; label: string }> = currentModels.map(m => ({
+    value: m.id,
+    label: m.name
+  }))
 
   useEffect(() => {
     if (instance) {
@@ -78,7 +42,7 @@ export default function InstanceForm({ instance, onSubmit, onCancel }: InstanceF
       setEnableStorage(true)
     } else {
       setProvider('openai')
-      setModel('gpt-3.5-turbo')
+      setModel('')
       setApiKey('')
       setName('')
       setCustomModel('')
@@ -90,8 +54,7 @@ export default function InstanceForm({ instance, onSubmit, onCancel }: InstanceF
 
   const handleProviderChange = (value: string) => {
     setProvider(value)
-    const defaultModel = MODELS[value]?.[0]?.value || ''
-    setModel(defaultModel)
+    setModel('')
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -122,7 +85,7 @@ export default function InstanceForm({ instance, onSubmit, onCancel }: InstanceF
         label="Provider"
         value={provider}
         onChange={(e) => handleProviderChange(e.target.value)}
-        options={PROVIDERS}
+        options={providerOptions}
       />
 
       <div>
@@ -138,7 +101,7 @@ export default function InstanceForm({ instance, onSubmit, onCancel }: InstanceF
           <Select
             value={model}
             onChange={(e) => setModel(e.target.value)}
-            options={MODELS[provider] || []}
+            options={modelOptions}
           />
         )}
       </div>
