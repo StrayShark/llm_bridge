@@ -1,4 +1,4 @@
-import * as React from "react"
+import * as React from 'react';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string
@@ -37,10 +37,10 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           <p className="mt-1.5 text-sm text-error">{error}</p>
         )}
       </div>
-    )
+    );
   }
-)
-Input.displayName = "Input"
+);
+Input.displayName = 'Input';
 
-export { Input }
-export type { InputProps }
+export { Input };
+export type { InputProps };

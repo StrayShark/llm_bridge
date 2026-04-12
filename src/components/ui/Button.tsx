@@ -1,4 +1,4 @@
-import * as React from "react"
+import * as React from 'react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'destructive'
@@ -8,20 +8,20 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className = '', variant = 'primary', size = 'md', loading, children, disabled, ...props }, ref) => {
-    const baseStyles = 'inline-flex items-center justify-center font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 disabled:pointer-events-none'
+    const baseStyles = 'inline-flex items-center justify-center font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 disabled:pointer-events-none';
 
     const variants = {
       primary: 'gradient-primary text-on-primary hover:brightness-105 active:brightness-95',
       secondary: 'bg-transparent border border-outline/20 text-on-surface hover:bg-surface-container-high',
       ghost: 'bg-transparent text-on-surface hover:bg-surface-container',
       destructive: 'bg-error/20 text-error hover:bg-error/30'
-    }
+    };
 
     const sizes = {
       sm: 'px-3 py-1.5 text-sm rounded-sm',
       md: 'px-6 py-2.5 text-sm rounded-md',
       lg: 'px-8 py-3 text-base rounded-md'
-    }
+    };
 
     return (
       <button
@@ -38,10 +38,10 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         )}
         {children}
       </button>
-    )
+    );
   }
-)
-Button.displayName = "Button"
+);
+Button.displayName = 'Button';
 
-export { Button }
-export type { ButtonProps }
+export { Button };
+export type { ButtonProps };

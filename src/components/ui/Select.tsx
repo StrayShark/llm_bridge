@@ -1,4 +1,4 @@
-import * as React from "react"
+import * as React from 'react';
 
 interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   label?: string
@@ -37,10 +37,10 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           <p className="mt-1.5 text-sm text-error">{error}</p>
         )}
       </div>
-    )
+    );
   }
-)
-Select.displayName = "Select"
+);
+Select.displayName = 'Select';
 
-export { Select }
-export type { SelectProps }
+export { Select };
+export type { SelectProps };

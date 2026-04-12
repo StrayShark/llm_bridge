@@ -1,4 +1,4 @@
-import * as React from "react"
+import * as React from 'react';
 
 interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   variant?: 'default' | 'success' | 'warning' | 'error' | 'primary'
@@ -12,7 +12,7 @@ const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(
       warning: 'bg-tertiary/20 text-tertiary',
       error: 'bg-error/20 text-error',
       primary: 'bg-primary/20 text-primary'
-    }
+    };
 
     return (
       <span
@@ -26,10 +26,10 @@ const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(
       >
         {children}
       </span>
-    )
+    );
   }
-)
-Badge.displayName = "Badge"
+);
+Badge.displayName = 'Badge';
 
-export { Badge }
-export type { BadgeProps }
+export { Badge };
+export type { BadgeProps };

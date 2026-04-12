@@ -1,5 +1,5 @@
-import { Database, Circle } from 'lucide-react'
-import type { LLMConfig, GenerateResult } from '../core/types'
+import { Database, Circle } from 'lucide-react';
+import type { LLMConfig, GenerateResult } from '../core/types';
 
 type InstanceStatus = 'idle' | 'loading' | 'success' | 'error'
 
@@ -23,7 +23,7 @@ const STATUS_CONFIG = {
   loading: { dotColor: 'bg-tertiary animate-pulse' },
   success: { dotColor: 'bg-green-500' },
   error: { dotColor: 'bg-error' }
-}
+};
 
 export default function InstanceCard({
   instance,
@@ -35,23 +35,23 @@ export default function InstanceCard({
   onDelete,
   onShowError
 }: InstanceCardProps) {
-  const statusConfig = STATUS_CONFIG[state.status]
+  const statusConfig = STATUS_CONFIG[state.status];
 
   const parseErrorMessage = (error: string): string => {
     try {
-      const parsed = JSON.parse(error)
-      return parsed.error?.message || parsed.message || error
+      const parsed = JSON.parse(error);
+      return parsed.error?.message || parsed.message || error;
     } catch {
-      return error
+      return error;
     }
-  }
+  };
 
   const handleShowError = () => {
     if (state.error && onShowError) {
-      const message = parseErrorMessage(state.error)
-      onShowError(message)
+      const message = parseErrorMessage(state.error);
+      onShowError(message);
     }
-  }
+  };
 
   return (
     <div
@@ -89,8 +89,8 @@ export default function InstanceCard({
           {state.status === 'error' ? (
             <button
               onClick={(e) => {
-                e.stopPropagation()
-                handleShowError()
+                e.stopPropagation();
+                handleShowError();
               }}
               className="flex items-center gap-1 text-xs text-error hover:text-error/80 transition-colors bg-error/10 px-2 py-1 rounded"
             >
@@ -107,8 +107,8 @@ export default function InstanceCard({
       <div className="mt-2 flex justify-end gap-2">
         <button
           onClick={(e) => {
-            e.stopPropagation()
-            onEdit()
+            e.stopPropagation();
+            onEdit();
           }}
           className="px-2 py-1 text-xs text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded transition-colors"
         >
@@ -116,8 +116,8 @@ export default function InstanceCard({
         </button>
         <button
           onClick={(e) => {
-            e.stopPropagation()
-            onDelete()
+            e.stopPropagation();
+            onDelete();
           }}
           className="px-2 py-1 text-xs text-error hover:bg-error/10 rounded transition-colors"
         >
@@ -125,5 +125,5 @@ export default function InstanceCard({
         </button>
       </div>
     </div>
-  )
+  );
 }

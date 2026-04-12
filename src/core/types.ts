@@ -27,6 +27,16 @@ export interface GenerateResult {
   raw?: any
 }
 
+export interface LLMOptions {
+  temperature?: number
+  maxTokens?: number
+  topP?: number
+  presencePenalty?: number
+  frequencyPenalty?: number
+  seed?: number
+  responseFormat?: 'text' | 'json'
+}
+
 export interface LLMConfig {
   id: string
   provider: string
@@ -35,6 +45,7 @@ export interface LLMConfig {
   baseURL?: string
   proxy?: string
   timeout?: number
+  options?: LLMOptions
   adapter?: ProviderAdapter
   name?: string
   description?: string
@@ -65,4 +76,4 @@ export interface FormattedOutput {
   raw: string
 }
 
-export { ProviderEnum } from '../provider/config'
+export { ProviderEnum } from '../provider/config';

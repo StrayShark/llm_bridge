@@ -1,4 +1,4 @@
-import { Modal } from './ui'
+import { Modal } from './ui';
 
 interface ErrorModalProps {
   isOpen: boolean
@@ -23,5 +23,5 @@ export default function ErrorModal({ isOpen, onClose, message, instanceName }: E
         </div>
       </div>
     </Modal>
-  )
+  );
 }

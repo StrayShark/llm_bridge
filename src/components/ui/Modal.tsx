@@ -1,4 +1,4 @@
-import * as React from "react"
+import * as React from 'react';
 
 interface ModalProps {
   isOpen: boolean
@@ -9,7 +9,7 @@ interface ModalProps {
 }
 
 const Modal = ({ isOpen, onClose, title, children, className = '' }: ModalProps) => {
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -18,12 +18,13 @@ const Modal = ({ isOpen, onClose, title, children, className = '' }: ModalProps)
         onClick={onClose}
       />
       <div className={`
-        relative z-10 w-full max-w-2xl mx-4
+        relative z-10 w-full max-w-2xl max-h-[90vh] mx-4
         bg-surface-container rounded-lg shadow-ambient
         animate-slide-up
+        flex flex-col
         ${className}
       `}>
-        <div className="flex items-center justify-between p-6 border-b border-surface-container-high">
+        <div className="flex items-center justify-between p-6 border-b border-surface-container-high shrink-0">
           <h2 className="text-xl font-display font-semibold">{title}</h2>
           <button
             onClick={onClose}
@@ -34,12 +35,12 @@ const Modal = ({ isOpen, onClose, title, children, className = '' }: ModalProps)
             </svg>
           </button>
         </div>
-        <div className="p-6">
+        <div className="flex-1 overflow-y-auto p-6">
           {children}
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export { Modal }
+export { Modal };

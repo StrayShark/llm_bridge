@@ -1,70 +1,70 @@
-import { useState, useEffect } from 'react'
-import { useLLMStore } from './store'
-import type { LLMConfig } from './core/types'
-import InstanceForm from './components/InstanceForm'
-import InstanceCard from './components/InstanceCard'
-import MultiChatPanel from './components/MultiChatPanel'
-import ErrorModal from './components/ErrorModal'
-import { Button } from './components/ui'
-import { indexedDBStorage } from './store/indexedDB'
+import { useState, useEffect } from 'react';
+import { useLLMStore } from './store';
+import type { LLMConfig } from './core/types';
+import InstanceForm from './components/InstanceForm';
+import InstanceCard from './components/InstanceCard';
+import MultiChatPanel from './components/MultiChatPanel';
+import ErrorModal from './components/ErrorModal';
+import { Button } from './components/ui';
+import { indexedDBStorage } from './store/indexedDB';
 
-const STORAGE_KEY = 'llm-bridge-storage'
+const STORAGE_KEY = 'llm-bridge-storage';
 
 async function saveToIndexedDB(instances: Record<string, LLMConfig>, activeId: string | null) {
   await indexedDBStorage.setItem(STORAGE_KEY, JSON.stringify({
     state: { instances, activeId },
     version: 0
-  }))
+  }));
 }
 
 async function loadFromIndexedDB() {
-  const data = await indexedDBStorage.getItem(STORAGE_KEY)
+  const data = await indexedDBStorage.getItem(STORAGE_KEY);
   if (data) {
     try {
-      return JSON.parse(data)
-    } catch (e) {
-      return null
+      return JSON.parse(data);
+    } catch {
+      return null;
     }
   }
-  return null
+  return null;
 }
 
 function App() {
-  const { instances, addInstance, removeInstance, updateInstance, testConnection, stream, instanceStates } = useLLMStore()
-  const [showModal, setShowModal] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [storedIds, setStoredIds] = useState<Set<string>>(new Set())
-  const [isTesting, setIsTesting] = useState(false)
-  const [editingInstance, setEditingInstance] = useState<LLMConfig | null>(null)
+  const { instances, addInstance, removeInstance, updateInstance, testConnection, stream, instanceStates } = useLLMStore();
+  const [showModal, setShowModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [storedIds, setStoredIds] = useState<Set<string>>(new Set());
+  const [isTesting, setIsTesting] = useState(false);
+  const [editingInstance, setEditingInstance] = useState<LLMConfig | null>(null);
   const [errorModal, setErrorModal] = useState<{
     isOpen: boolean
     message: string
     instanceName?: string
-  }>({ isOpen: false, message: '' })
+  }>({ isOpen: false, message: '' });
 
   useEffect(() => {
     const init = async () => {
       try {
-        const savedData = await loadFromIndexedDB()
+        const savedData = await loadFromIndexedDB();
         if (savedData?.state?.instances) {
-          const storedSet = new Set<string>()
+          const storedSet = new Set<string>();
           Object.values(savedData.state.instances).forEach((config: any) => {
-            addInstance(config)
+            addInstance(config);
             if (config.id) {
-              storedSet.add(config.id)
+              storedSet.add(config.id);
             }
-          })
-          setStoredIds(storedSet)
+          });
+          setStoredIds(storedSet);
         }
       } catch (e) {
-        console.error('Failed to load saved data:', e)
+        console.error('Failed to load saved data:', e);
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
-    init()
-  }, [])
+    };
+    init();
+  }, []);
 
   const handleCreateInstance = async (config: Partial<LLMConfig>, enableStorage: boolean) => {
     const newConfig = {
@@ -72,21 +72,21 @@ function App() {
       provider: config.provider || 'openai',
       model: config.model || 'gpt-3.5-turbo',
       apiKey: config.apiKey || ''
-    } as LLMConfig
-    addInstance(newConfig)
-    setShowModal(false)
-    setEditingInstance(null)
+    } as LLMConfig;
+    addInstance(newConfig);
+    setShowModal(false);
+    setEditingInstance(null);
     
     if (enableStorage && newConfig.id) {
-      setStoredIds(prev => new Set([...prev, newConfig.id]))
-      const allInstances = useLLMStore.getState().instances
-      const currentActiveId = useLLMStore.getState().activeId
-      await saveToIndexedDB(allInstances, currentActiveId)
+      setStoredIds(prev => new Set([...prev, newConfig.id]));
+      const allInstances = useLLMStore.getState().instances;
+      const currentActiveId = useLLMStore.getState().activeId;
+      await saveToIndexedDB(allInstances, currentActiveId);
     }
-  }
+  };
 
   const handleUpdateInstance = async (config: Partial<LLMConfig>, enableStorage: boolean) => {
-    if (!editingInstance?.id) return
+    if (!editingInstance?.id) return;
     
     const updatedConfig = {
       ...editingInstance,
@@ -94,97 +94,97 @@ function App() {
       provider: config.provider || editingInstance.provider,
       model: config.model || editingInstance.model,
       apiKey: config.apiKey ?? editingInstance.apiKey
-    } as LLMConfig
+    } as LLMConfig;
     
-    updateInstance(editingInstance.id, updatedConfig)
-    setShowModal(false)
-    setEditingInstance(null)
+    updateInstance(editingInstance.id, updatedConfig);
+    setShowModal(false);
+    setEditingInstance(null);
     
     if (enableStorage) {
-      const allInstances = useLLMStore.getState().instances
-      const currentActiveId = useLLMStore.getState().activeId
-      await saveToIndexedDB(allInstances, currentActiveId)
+      const allInstances = useLLMStore.getState().instances;
+      const currentActiveId = useLLMStore.getState().activeId;
+      await saveToIndexedDB(allInstances, currentActiveId);
     }
-  }
+  };
 
   const handleEditInstance = (instance: LLMConfig) => {
-    setEditingInstance(instance)
-    setShowModal(true)
-  }
+    setEditingInstance(instance);
+    setShowModal(true);
+  };
 
   const handleCloseModal = () => {
-    setShowModal(false)
-    setEditingInstance(null)
-  }
+    setShowModal(false);
+    setEditingInstance(null);
+  };
 
   const handleShowError = (message: string, instanceName?: string) => {
     setErrorModal({
       isOpen: true,
       message,
       instanceName
-    })
-  }
+    });
+  };
 
   const handleToggleSelect = (id: string) => {
-    const newSelected = new Set(selectedIds)
+    const newSelected = new Set(selectedIds);
     if (newSelected.has(id)) {
-      newSelected.delete(id)
+      newSelected.delete(id);
     } else {
-      newSelected.add(id)
+      newSelected.add(id);
     }
-    setSelectedIds(newSelected)
-  }
+    setSelectedIds(newSelected);
+  };
 
   const handleBatchTest = async () => {
-    if (selectedIds.size === 0) return
+    if (selectedIds.size === 0) return;
     
-    setIsTesting(true)
+    setIsTesting(true);
     try {
       for (const id of selectedIds) {
-        await testConnection(id)
+        await testConnection(id);
       }
     } catch (error) {
-      console.error('Test failed:', error)
+      console.error('Test failed:', error);
     } finally {
-      setIsTesting(false)
+      setIsTesting(false);
     }
-  }
+  };
 
   const handleRemoveInstance = async (id: string) => {
-    const wasStored = storedIds.has(id)
+    const wasStored = storedIds.has(id);
     
-    removeInstance(id)
-    const newSelected = new Set(selectedIds)
-    newSelected.delete(id)
-    setSelectedIds(newSelected)
+    removeInstance(id);
+    const newSelected = new Set(selectedIds);
+    newSelected.delete(id);
+    setSelectedIds(newSelected);
     
     if (wasStored) {
-      const newStoredIds = new Set(storedIds)
-      newStoredIds.delete(id)
-      setStoredIds(newStoredIds)
+      const newStoredIds = new Set(storedIds);
+      newStoredIds.delete(id);
+      setStoredIds(newStoredIds);
       
-      const allInstances = useLLMStore.getState().instances
-      const currentActiveId = useLLMStore.getState().activeId
-      await saveToIndexedDB(allInstances, currentActiveId)
+      const allInstances = useLLMStore.getState().instances;
+      const currentActiveId = useLLMStore.getState().activeId;
+      await saveToIndexedDB(allInstances, currentActiveId);
     }
-  }
+  };
 
   const handleStream = async function* (id: string, prompt: string): AsyncGenerator<string, void, unknown> {
     yield* stream(id, {
       messages: [{ role: 'user', content: prompt }]
-    })
-  }
+    });
+  };
 
   const selectedInstances = Array.from(selectedIds)
     .map(id => instances[id])
-    .filter(Boolean)
+    .filter(Boolean);
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-surface-dim text-on-surface flex items-center justify-center">
         <div className="text-on-surface-variant">加载中...</div>
       </div>
-    )
+    );
   }
 
   return (
@@ -209,8 +209,8 @@ function App() {
             ) : (
               <div className="space-y-2">
                 {Object.values(instances).map((instance) => {
-                  if (!instance.id) return null
-                  const state = instanceStates[instance.id] || { status: 'idle' }
+                  if (!instance.id) return null;
+                  const state = instanceStates[instance.id] || { status: 'idle' };
                   return (
                     <InstanceCard
                       key={instance.id}
@@ -223,7 +223,7 @@ function App() {
                       onDelete={() => handleRemoveInstance(instance.id)}
                       onShowError={(message) => handleShowError(message, instance.name || instance.id)}
                     />
-                  )
+                  );
                 })}
               </div>
             )}
@@ -287,7 +287,7 @@ function App() {
         instanceName={errorModal.instanceName}
       />
     </div>
-  )
+  );
 }
 
-export default App
+export default App;

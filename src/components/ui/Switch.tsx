@@ -1,4 +1,4 @@
-import * as React from "react"
+import * as React from 'react';
 
 interface SwitchProps {
   checked: boolean
@@ -34,9 +34,9 @@ const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
           `}
         />
       </button>
-    )
+    );
   }
-)
-Switch.displayName = "Switch"
+);
+Switch.displayName = 'Switch';
 
-export { Switch }
+export { Switch };

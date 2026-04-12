@@ -4,10 +4,10 @@ interface TableProps {
 }
 
 export function Table({ data, title }: TableProps) {
-  const entries = Object.entries(data)
+  const entries = Object.entries(data);
 
   if (entries.length === 0) {
-    return null
+    return null;
   }
 
   return (
@@ -30,5 +30,5 @@ export function Table({ data, title }: TableProps) {
         </tbody>
       </table>
     </div>
-  )
+  );
 }

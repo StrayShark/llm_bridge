@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from 'react'
-import type { LLMConfig } from '../core/types'
-import MarkdownRenderer from './MarkdownRenderer'
+import { useState, useRef, useEffect } from 'react';
+import type { LLMConfig } from '../core/types';
+import MarkdownRenderer from './MarkdownRenderer';
 
 interface Message {
   role: 'user' | 'assistant'
@@ -14,78 +14,78 @@ interface MultiChatPanelProps {
 }
 
 export default function MultiChatPanel({ selectedInstances, onStream }: MultiChatPanelProps) {
-  const [input, setInput] = useState('')
-  const [isComposing, setIsComposing] = useState(false)
+  const [input, setInput] = useState('');
+  const [isComposing, setIsComposing] = useState(false);
   const [allSessions, setAllSessions] = useState<Record<string, {
     messages: Message[]
     streamContent: string
     isStreaming: boolean
-  }>>({})
-  const messagesEndRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  }>>({});
+  const messagesEndRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const scrollToBottom = (id: string) => {
-    messagesEndRefs.current[id]?.scrollIntoView({ behavior: 'auto' })
-  }
+    messagesEndRefs.current[id]?.scrollIntoView({ behavior: 'auto' });
+  };
 
   useEffect(() => {
     selectedInstances.forEach(inst => {
-      if (!inst.id) return
+      if (!inst.id) return;
       if (!allSessions[inst.id]) {
         setAllSessions(prev => ({
           ...prev,
           [inst.id]: { messages: [], streamContent: '', isStreaming: false }
-        }))
+        }));
       }
-    })
-  }, [selectedInstances])
+    });
+  }, [selectedInstances]);
 
   useEffect(() => {
     selectedInstances.forEach(inst => {
       if (inst.id) {
-        scrollToBottom(inst.id)
+        scrollToBottom(inst.id);
       }
-    })
-  }, [allSessions, selectedInstances])
+    });
+  }, [allSessions, selectedInstances]);
 
   const handleSend = async () => {
-    if (!input.trim() || selectedInstances.length === 0) return
+    if (!input.trim() || selectedInstances.length === 0) return;
 
-    const userMessage: Message = { role: 'user', content: input, timestamp: new Date() }
+    const userMessage: Message = { role: 'user', content: input, timestamp: new Date() };
     
     setAllSessions(prev => {
-      const updated: Record<string, any> = {}
+      const updated: Record<string, any> = {};
       selectedInstances.forEach(inst => {
-        if (!inst.id) return
+        if (!inst.id) return;
         updated[inst.id] = {
           ...prev[inst.id],
           messages: [...(prev[inst.id]?.messages || []), userMessage],
           streamContent: '',
           isStreaming: true
-        }
-      })
-      return updated
-    })
+        };
+      });
+      return updated;
+    });
 
-    setInput('')
+    setInput('');
 
     const streamPromises = selectedInstances.map(async (instance) => {
-      if (!instance.id) return
-      const instanceId = instance.id
-      let fullContent = ''
+      if (!instance.id) return;
+      const instanceId = instance.id;
+      let fullContent = '';
       try {
         for await (const chunk of onStream(instanceId, input)) {
-          fullContent += chunk
+          fullContent += chunk;
           setAllSessions(prev => ({
             ...prev,
             [instanceId]: {
               ...prev[instanceId],
               streamContent: fullContent
             }
-          }))
-          scrollToBottom(instanceId)
+          }));
+          scrollToBottom(instanceId);
         }
 
-        const assistantMessage: Message = { role: 'assistant', content: fullContent, timestamp: new Date() }
+        const assistantMessage: Message = { role: 'assistant', content: fullContent, timestamp: new Date() };
         setAllSessions(prev => ({
           ...prev,
           [instanceId]: {
@@ -94,9 +94,9 @@ export default function MultiChatPanel({ selectedInstances, onStream }: MultiCha
             streamContent: '',
             isStreaming: false
           }
-        }))
+        }));
       } catch (error: any) {
-        const errorMessage: Message = { role: 'assistant', content: `错误: ${error.message}`, timestamp: new Date() }
+        const errorMessage: Message = { role: 'assistant', content: `错误: ${error.message}`, timestamp: new Date() };
         setAllSessions(prev => ({
           ...prev,
           [instanceId]: {
@@ -105,21 +105,21 @@ export default function MultiChatPanel({ selectedInstances, onStream }: MultiCha
             streamContent: '',
             isStreaming: false
           }
-        }))
+        }));
       }
-    })
+    });
 
-    await Promise.all(streamPromises)
-  }
+    await Promise.all(streamPromises);
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey && !isComposing) {
-      e.preventDefault()
-      handleSend()
+      e.preventDefault();
+      handleSend();
     }
-  }
+  };
 
-  const isStreaming = selectedInstances.some(inst => inst.id && allSessions[inst.id]?.isStreaming)
+  const isStreaming = selectedInstances.some(inst => inst.id && allSessions[inst.id]?.isStreaming);
 
   return (
     <div className="flex flex-col h-full bg-surface-container">
@@ -133,8 +133,8 @@ export default function MultiChatPanel({ selectedInstances, onStream }: MultiCha
         ) : (
           <div className="grid grid-cols-2 gap-4 p-4">
             {selectedInstances.map((instance) => {
-              if (!instance.id) return null
-              const session = allSessions[instance.id] || { messages: [], streamContent: '', isStreaming: false }
+              if (!instance.id) return null;
+              const session = allSessions[instance.id] || { messages: [], streamContent: '', isStreaming: false };
               return (
                 <div key={instance.id} className="flex flex-col bg-surface-container-low rounded-lg h-[600px] border border-surface-container-high">
                   <div className="px-4 py-3 bg-surface-container shrink-0 h-14 rounded-t-lg">
@@ -173,10 +173,10 @@ export default function MultiChatPanel({ selectedInstances, onStream }: MultiCha
                       </div>
                     )}
 
-                    <div ref={(el) => { messagesEndRefs.current[instance.id] = el }} />
+                    <div ref={(el) => { messagesEndRefs.current[instance.id] = el; }} />
                   </div>
                 </div>
-              )
+              );
             })}
           </div>
         )}
@@ -204,5 +204,5 @@ export default function MultiChatPanel({ selectedInstances, onStream }: MultiCha
         </div>
       </div>
     </div>
-  )
+  );
 }

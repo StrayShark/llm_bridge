@@ -1,4 +1,4 @@
-import * as React from "react"
+import * as React from 'react';
 
 interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string
@@ -27,10 +27,10 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           <p className="mt-1.5 text-sm text-error">{error}</p>
         )}
       </div>
-    )
+    );
   }
-)
-Textarea.displayName = "Textarea"
+);
+Textarea.displayName = 'Textarea';
 
-export { Textarea }
-export type { TextareaProps }
+export { Textarea };
+export type { TextareaProps };

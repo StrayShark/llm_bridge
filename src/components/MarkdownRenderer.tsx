@@ -1,4 +1,4 @@
-import ReactMarkdown from 'react-markdown'
+import ReactMarkdown from 'react-markdown';
 
 interface MarkdownRendererProps {
   content: string
@@ -9,5 +9,5 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
     <ReactMarkdown className="prose prose-sm max-w-none">
       {content}
     </ReactMarkdown>
-  )
+  );
 }
