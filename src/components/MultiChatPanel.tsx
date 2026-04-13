@@ -11,9 +11,11 @@ interface Message {
 interface MultiChatPanelProps {
   selectedInstances: LLMConfig[]
   onStream: (id: string, prompt: string) => AsyncGenerator<string, void, unknown>
+  onStop: (id: string) => void
+  instanceStatuses: Record<string, string>
 }
 
-export default function MultiChatPanel({ selectedInstances, onStream }: MultiChatPanelProps) {
+export default function MultiChatPanel({ selectedInstances, onStream, onStop, instanceStatuses }: MultiChatPanelProps) {
   const [input, setInput] = useState('');
   const [isComposing, setIsComposing] = useState(false);
   const [allSessions, setAllSessions] = useState<Record<string, {
@@ -96,12 +98,13 @@ export default function MultiChatPanel({ selectedInstances, onStream }: MultiCha
           }
         }));
       } catch (error: any) {
-        const errorMessage: Message = { role: 'assistant', content: `错误: ${error.message}`, timestamp: new Date() };
+        const errorMsg = error?.message === 'Request cancelled' ? '已停止' : `错误: ${error.message}`;
+        const assistantMessage: Message = { role: 'assistant', content: fullContent || errorMsg, timestamp: new Date() };
         setAllSessions(prev => ({
           ...prev,
           [instanceId]: {
             ...prev[instanceId],
-            messages: [...(prev[instanceId]?.messages || []), errorMessage],
+            messages: fullContent ? [...(prev[instanceId]?.messages || []), assistantMessage] : (prev[instanceId]?.messages || []),
             streamContent: '',
             isStreaming: false
           }
@@ -119,7 +122,18 @@ export default function MultiChatPanel({ selectedInstances, onStream }: MultiCha
     }
   };
 
-  const isStreaming = selectedInstances.some(inst => inst.id && allSessions[inst.id]?.isStreaming);
+  const handleStop = (id: string) => {
+    onStop(id);
+    setAllSessions(prev => ({
+      ...prev,
+      [id]: {
+        ...prev[id],
+        isStreaming: false
+      }
+    }));
+  };
+
+  const anyStreaming = selectedInstances.some(inst => inst.id && instanceStatuses[inst.id] === 'loading');
 
   return (
     <div className="flex flex-col h-full bg-surface-container">
@@ -135,15 +149,33 @@ export default function MultiChatPanel({ selectedInstances, onStream }: MultiCha
             {selectedInstances.map((instance) => {
               if (!instance.id) return null;
               const session = allSessions[instance.id] || { messages: [], streamContent: '', isStreaming: false };
+              const status = instanceStatuses[instance.id] || 'idle';
+              const isThisStreaming = status === 'loading';
+
               return (
                 <div key={instance.id} className="flex flex-col bg-surface-container-low rounded-lg h-[600px] border border-surface-container-high">
                   <div className="px-4 py-3 bg-surface-container shrink-0 h-14 rounded-t-lg">
-                    <h3 className="font-medium text-sm text-on-surface truncate">
-                      {instance.name}
-                    </h3>
-                    <p className="text-xs text-on-surface-variant truncate">
-                      {instance.provider} · {instance.model}
-                    </p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium text-sm text-on-surface truncate">
+                          {instance.name}
+                        </h3>
+                        <p className="text-xs text-on-surface-variant truncate">
+                          {instance.provider} · {instance.model}
+                        </p>
+                      </div>
+                      {isThisStreaming && (
+                        <button
+                          onClick={() => handleStop(instance.id)}
+                          className="shrink-0 ml-2 p-1.5 rounded-md bg-error/20 hover:bg-error/30 text-error transition-colors"
+                          title="停止"
+                        >
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                            <rect x="6" y="6" width="12" height="12" rx="2" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   <div className="flex-1 p-4 space-y-3 overflow-y-auto">
@@ -191,16 +223,28 @@ export default function MultiChatPanel({ selectedInstances, onStream }: MultiCha
             onCompositionStart={() => setIsComposing(true)}
             onCompositionEnd={() => setIsComposing(false)}
             placeholder={selectedInstances.length === 0 ? '请先选择实例' : `发送消息到 ${selectedInstances.length} 个实例...`}
-            disabled={isStreaming || selectedInstances.length === 0}
+            disabled={anyStreaming || selectedInstances.length === 0}
             className="flex-1 px-4 py-3 bg-surface-container border border-surface-container-high rounded-lg text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none resize-none disabled:opacity-50"
           />
-          <button
-            onClick={handleSend}
-            disabled={!input.trim() || selectedInstances.length === 0 || isStreaming}
-            className="gradient-primary text-on-primary px-4 rounded-lg font-medium hover:brightness-105 active:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-          >
-            发送
-          </button>
+          {anyStreaming ? (
+            <button
+              onClick={() => selectedInstances.forEach(inst => inst.id && handleStop(inst.id))}
+              className="bg-error text-white px-4 rounded-lg font-medium hover:bg-error/90 transition-all flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <rect x="6" y="6" width="12" height="12" rx="2" />
+              </svg>
+              停止
+            </button>
+          ) : (
+            <button
+              onClick={handleSend}
+              disabled={!input.trim() || selectedInstances.length === 0}
+              className="gradient-primary text-on-primary px-4 rounded-lg font-medium hover:brightness-105 active:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              发送
+            </button>
+          )}
         </div>
       </div>
     </div>

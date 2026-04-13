@@ -1,7 +1,7 @@
 import { Database, Circle } from 'lucide-react';
 import type { LLMConfig, GenerateResult } from '../core/types';
 
-type InstanceStatus = 'idle' | 'loading' | 'success' | 'error'
+type InstanceStatus = 'idle' | 'loading' | 'success' | 'error' | 'stopped'
 
 interface InstanceCardProps {
   instance: LLMConfig
@@ -18,11 +18,12 @@ interface InstanceCardProps {
   onShowError?: (message: string) => void
 }
 
-const STATUS_CONFIG = {
+const STATUS_CONFIG: Record<InstanceStatus, { dotColor: string }> = {
   idle: { dotColor: 'bg-surface-container-high' },
   loading: { dotColor: 'bg-tertiary animate-pulse' },
   success: { dotColor: 'bg-green-500' },
-  error: { dotColor: 'bg-error' }
+  error: { dotColor: 'bg-error' },
+  stopped: { dotColor: 'bg-yellow-500' }
 };
 
 export default function InstanceCard({
@@ -35,7 +36,7 @@ export default function InstanceCard({
   onDelete,
   onShowError
 }: InstanceCardProps) {
-  const statusConfig = STATUS_CONFIG[state.status];
+  const statusConfig = STATUS_CONFIG[state.status] || STATUS_CONFIG.idle;
 
   const parseErrorMessage = (error: string): string => {
     try {

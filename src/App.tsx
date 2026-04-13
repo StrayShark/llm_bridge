@@ -30,7 +30,7 @@ async function loadFromIndexedDB() {
 }
 
 function App() {
-  const { instances, addInstance, removeInstance, updateInstance, testConnection, stream, instanceStates } = useLLMStore();
+  const { instances, addInstance, removeInstance, updateInstance, testConnection, stream, stopInstance, instanceStates } = useLLMStore();
   const [showModal, setShowModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -175,9 +175,17 @@ function App() {
     });
   };
 
+  const handleStop = (id: string) => {
+    stopInstance(id);
+  };
+
   const selectedInstances = Array.from(selectedIds)
     .map(id => instances[id])
     .filter(Boolean);
+
+  const instanceStatuses = Object.fromEntries(
+    Object.entries(instanceStates).map(([id, state]) => [id, state.status])
+  );
 
   if (isLoading) {
     return (
@@ -245,6 +253,8 @@ function App() {
           <MultiChatPanel 
             selectedInstances={selectedInstances}
             onStream={handleStream}
+            onStop={handleStop}
+            instanceStatuses={instanceStatuses}
           />
         </main>
       </div>

@@ -2,8 +2,13 @@ import type { LLMConfig, GenerateOptions, GenerateResult, ProviderAdapter } from
 import { getProviderAdapter } from '../provider/index';
 
 export interface LLMInstance {
-  generate(options: GenerateOptions): Promise<GenerateResult>
-  stream(options: GenerateOptions): AsyncIterable<string>
+  generate(options: GenerateOptions, signal?: AbortSignal): Promise<GenerateResult>
+  stream(options: GenerateOptions, signal?: AbortSignal): AsyncIterable<string>
+}
+
+export interface StreamController {
+  abort: () => void
+  signal: AbortSignal
 }
 
 const DEFAULT_TIMEOUT = 60000;
@@ -27,60 +32,73 @@ function getEndpoint(provider: string, baseURL?: string): string {
   }
 }
 
-async function fetchWithTimeout(url: string, options: RequestInit, timeout: number = DEFAULT_TIMEOUT): Promise<Response> {
+function fetchWithTimeout(url: string, options: RequestInit, timeout: number = DEFAULT_TIMEOUT, externalSignal?: AbortSignal): { response: Promise<Response>, controller: AbortController } {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-  try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal
-    });
+  const mergedSignal = externalSignal
+    ? anySignal([externalSignal, controller.signal])
+    : controller.signal;
+
+  const response = fetch(url, {
+    ...options,
+    signal: mergedSignal
+  }).finally(() => {
     clearTimeout(timeoutId);
-    return response;
-  } catch (error) {
-    clearTimeout(timeoutId);
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error(`Request timeout after ${timeout}ms`, { cause: error });
+  });
+
+  return { response, controller };
+}
+
+function anySignal(signals: AbortSignal[]): AbortSignal {
+  const controller = new AbortController();
+  
+  for (const signal of signals) {
+    if (signal.aborted) {
+      controller.abort();
+      return controller.signal;
     }
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error(String(error), { cause: error });
+    signal.addEventListener('abort', () => controller.abort(), { once: true });
   }
+  
+  return controller.signal;
 }
 
 export function createLLM(config: LLMConfig): LLMInstance {
   const adapter: ProviderAdapter = config.adapter || getProviderAdapter(config.provider) || getProviderAdapter('custom')!;
 
-  async function generate(options: GenerateOptions): Promise<GenerateResult> {
+  async function generate(options: GenerateOptions, signal?: AbortSignal): Promise<GenerateResult> {
     const endpoint = getEndpoint(config.provider, config.baseURL);
     const request = adapter.buildRequest(config, options.messages, options);
     const timeout = config.timeout || DEFAULT_TIMEOUT;
 
     try {
-      const response = await fetchWithTimeout(endpoint, request, timeout);
+      const { response } = fetchWithTimeout(endpoint, request, timeout, signal);
+      const res = await response;
 
-      if (!response.ok) {
+      if (!res.ok) {
         let errorDetail = '';
         try {
-          const errorData = await response.json();
+          const errorData = await res.json();
           errorDetail = errorData.error?.message || errorData.message || JSON.stringify(errorData);
         } catch {
-          errorDetail = await response.text();
+          errorDetail = await res.text();
         }
         throw new Error(JSON.stringify({
-          code: response.status,
-          status: response.status,
+          code: res.status,
+          status: res.status,
           message: errorDetail
-        }), { cause: response });
+        }), { cause: res });
       }
 
-      const data = await response.json();
+      const data = await res.json();
       return adapter.parseResponse(data);
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Request cancelled', { cause: error });
+      }
       if (error instanceof Error) {
-        if (error.message.includes('timeout') || error.message.includes('abort')) {
+        if (error.message.includes('timeout')) {
           throw error;
         }
         if (error.message.includes('fetch') || error.message.includes('connection') || error.message.includes('ERR_')) {
@@ -95,33 +113,37 @@ export function createLLM(config: LLMConfig): LLMInstance {
     }
   }
 
-  async function *stream(options: GenerateOptions): AsyncIterable<string> {
+  async function *stream(options: GenerateOptions, signal?: AbortSignal): AsyncIterable<string> {
     const endpoint = getEndpoint(config.provider, config.baseURL);
     const request = adapter.buildRequest(config, options.messages, { ...options, stream: true });
     const timeout = config.timeout || DEFAULT_TIMEOUT;
 
     try {
-      const response = await fetchWithTimeout(endpoint, request, timeout);
+      const { response } = fetchWithTimeout(endpoint, request, timeout, signal);
+      const res = await response;
 
-      if (!response.ok) {
+      if (!res.ok) {
         let errorDetail = '';
         try {
-          const errorData = await response.json();
+          const errorData = await res.json();
           errorDetail = errorData.error?.message || errorData.message || JSON.stringify(errorData);
         } catch {
-          errorDetail = await response.text();
+          errorDetail = await res.text();
         }
         throw new Error(JSON.stringify({
-          code: response.status,
-          status: response.status,
+          code: res.status,
+          status: res.status,
           message: errorDetail
-        }), { cause: response });
+        }), { cause: res });
       }
 
-      yield* adapter.parseStream(response);
+      yield* adapter.parseStream(res);
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Request cancelled', { cause: error });
+      }
       if (error instanceof Error) {
-        if (error.message.includes('timeout') || error.message.includes('abort')) {
+        if (error.message.includes('timeout')) {
           throw error;
         }
         if (error.message.includes('fetch') || error.message.includes('connection') || error.message.includes('ERR_')) {

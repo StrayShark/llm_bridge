@@ -27,6 +27,7 @@ export default [
         Response: 'readonly',
         RequestInit: 'readonly',
         AbortController: 'readonly',
+        AbortSignal: 'readonly',
         TextDecoder: 'readonly',
         crypto: 'readonly',
         document: 'readonly',

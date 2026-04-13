@@ -4,7 +4,7 @@ import type { LLMConfig, GenerateOptions, GenerateResult } from '../core/types';
 import { createLLM } from '../core/createLLM';
 import { getStorage, type StorageType } from './indexedDB';
 
-type InstanceStatus = 'idle' | 'loading' | 'success' | 'error'
+type InstanceStatus = 'idle' | 'loading' | 'success' | 'error' | 'stopped'
 
 interface LLMStore {
   storageType: StorageType
@@ -15,6 +15,7 @@ interface LLMStore {
     lastResponse?: GenerateResult
     error?: string
   }>
+  abortControllers: Record<string, AbortController>
 
   setStorageType: (type: StorageType) => void
   addInstance: (config: LLMConfig) => void
@@ -25,6 +26,7 @@ interface LLMStore {
   testConnection: (id: string) => Promise<boolean>
   generate: (id: string, options: GenerateOptions) => Promise<GenerateResult>
   stream: (id: string, options: GenerateOptions) => AsyncGenerator<string, void, unknown>
+  stopInstance: (id: string) => void
 
   getInstance: (id: string) => LLMConfig | undefined
   getAllInstances: () => LLMConfig[]
@@ -48,6 +50,7 @@ export const useLLMStore = create<LLMStore>()(
       instances: {},
       activeId: null,
       instanceStates: {},
+      abortControllers: {},
 
       setStorageType: (type: StorageType) => {
         set({ storageType: type });
@@ -68,7 +71,12 @@ export const useLLMStore = create<LLMStore>()(
       },
 
       removeInstance: (id: string) => {
+        const controller = get().abortControllers[id];
+        if (controller) {
+          controller.abort();
+        }
         set((state) => {
+          const { [id]: _, ...restAbortControllers } = state.abortControllers;
           const restInstances = Object.fromEntries(
             Object.entries(state.instances).filter(([key]) => key !== id)
           );
@@ -78,6 +86,7 @@ export const useLLMStore = create<LLMStore>()(
           return {
             instances: restInstances,
             instanceStates: restStates,
+            abortControllers: restAbortControllers,
             activeId: state.activeId === id ? Object.keys(restInstances)[0] || null : state.activeId
           };
         });
@@ -103,35 +112,43 @@ export const useLLMStore = create<LLMStore>()(
         const config = get().instances[id];
         if (!config) throw new Error('Instance not found');
 
+        const controller = new AbortController();
         set((state) => ({
           instanceStates: {
             ...state.instanceStates,
             [id]: { ...state.instanceStates[id], status: 'loading', error: undefined }
-          }
+          },
+          abortControllers: { ...state.abortControllers, [id]: controller }
         }));
 
         try {
           const llm = createLLM(config);
-          const result = await llm.generate({
+          await llm.generate({
             messages: [{ role: 'user', content: 'test' }],
             maxTokens: 5
-          });
+          }, controller.signal);
 
           set((state) => ({
             instanceStates: {
               ...state.instanceStates,
-              [id]: { status: 'success', lastResponse: result }
+              [id]: { status: 'success' }
             }
           }));
           return true;
         } catch (error) {
+          const isCancelled = error instanceof Error && error.message === 'Request cancelled';
           set((state) => ({
             instanceStates: {
               ...state.instanceStates,
-              [id]: { status: 'error', error: getErrorMessage(error) }
+              [id]: { status: isCancelled ? 'stopped' : 'error', error: isCancelled ? '已取消' : getErrorMessage(error) }
             }
           }));
           return false;
+        } finally {
+          set((state) => {
+            const { [id]: _, ...rest } = state.abortControllers;
+            return { abortControllers: rest };
+          });
         }
       },
 
@@ -139,16 +156,18 @@ export const useLLMStore = create<LLMStore>()(
         const config = get().instances[id];
         if (!config) throw new Error('Instance not found');
 
+        const controller = new AbortController();
         set((state) => ({
           instanceStates: {
             ...state.instanceStates,
             [id]: { ...state.instanceStates[id], status: 'loading', error: undefined }
-          }
+          },
+          abortControllers: { ...state.abortControllers, [id]: controller }
         }));
 
         try {
           const llm = createLLM(config);
-          const result = await llm.generate(options);
+          const result = await llm.generate(options, controller.signal);
 
           set((state) => ({
             instanceStates: {
@@ -158,13 +177,19 @@ export const useLLMStore = create<LLMStore>()(
           }));
           return result;
         } catch (error) {
+          const isCancelled = error instanceof Error && error.message === 'Request cancelled';
           set((state) => ({
             instanceStates: {
               ...state.instanceStates,
-              [id]: { status: 'error', error: getErrorMessage(error) }
+              [id]: { status: isCancelled ? 'stopped' : 'error', error: isCancelled ? '已取消' : getErrorMessage(error) }
             }
           }));
           throw error;
+        } finally {
+          set((state) => {
+            const { [id]: _, ...rest } = state.abortControllers;
+            return { abortControllers: rest };
+          });
         }
       },
 
@@ -172,19 +197,22 @@ export const useLLMStore = create<LLMStore>()(
         const config = get().instances[id];
         if (!config) throw new Error('Instance not found');
 
+        const controller = new AbortController();
+        let accumulatedContent = '';
+
         set((state) => ({
           instanceStates: {
             ...state.instanceStates,
             [id]: { ...state.instanceStates[id], status: 'loading', error: undefined }
-          }
+          },
+          abortControllers: { ...state.abortControllers, [id]: controller }
         }));
 
         try {
           const llm = createLLM(config);
-          let fullContent = '';
 
-          for await (const chunk of llm.stream(options)) {
-            fullContent += chunk;
+          for await (const chunk of llm.stream(options, controller.signal)) {
+            accumulatedContent += chunk;
             yield chunk;
           }
 
@@ -193,18 +221,35 @@ export const useLLMStore = create<LLMStore>()(
               ...state.instanceStates,
               [id]: {
                 status: 'success',
-                lastResponse: { content: fullContent }
+                lastResponse: { content: accumulatedContent }
               }
             }
           }));
         } catch (error) {
+          const isCancelled = error instanceof Error && error.message === 'Request cancelled';
           set((state) => ({
             instanceStates: {
               ...state.instanceStates,
-              [id]: { status: 'error', error: getErrorMessage(error) }
+              [id]: {
+                status: isCancelled ? 'stopped' : 'error',
+                error: isCancelled ? '已取消' : getErrorMessage(error),
+                lastResponse: { content: accumulatedContent }
+              }
             }
           }));
           throw error;
+        } finally {
+          set((state) => {
+            const { [id]: _, ...rest } = state.abortControllers;
+            return { abortControllers: rest };
+          });
+        }
+      },
+
+      stopInstance: (id: string) => {
+        const controller = get().abortControllers[id];
+        if (controller) {
+          controller.abort();
         }
       },
 
