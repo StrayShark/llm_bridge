@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import type { LLMConfig } from '../core/types';
-import MarkdownRenderer from './MarkdownRenderer';
+import ChatPane from './ChatPane';
 
 interface Message {
   role: 'user' | 'assistant'
@@ -23,11 +23,14 @@ export default function MultiChatPanel({ selectedInstances, onStream, onStop, in
     streamContent: string
     isStreaming: boolean
   }>>({});
-  const messagesEndRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  const scrollToBottom = (id: string) => {
-    messagesEndRefs.current[id]?.scrollIntoView({ behavior: 'auto' });
-  };
+  const inputRef = useRef(input);
+  const onStreamRef = useRef(onStream);
+  const onStopRef = useRef(onStop);
+
+  inputRef.current = input;
+  onStreamRef.current = onStream;
+  onStopRef.current = onStop;
 
   useEffect(() => {
     selectedInstances.forEach(inst => {
@@ -41,18 +44,11 @@ export default function MultiChatPanel({ selectedInstances, onStream, onStop, in
     });
   }, [selectedInstances]);
 
-  useEffect(() => {
-    selectedInstances.forEach(inst => {
-      if (inst.id) {
-        scrollToBottom(inst.id);
-      }
-    });
-  }, [allSessions, selectedInstances]);
-
   const handleSend = async () => {
     if (!input.trim() || selectedInstances.length === 0) return;
 
-    const userMessage: Message = { role: 'user', content: input, timestamp: new Date() };
+    const currentInput = inputRef.current;
+    const userMessage: Message = { role: 'user', content: currentInput, timestamp: new Date() };
     
     setAllSessions(prev => {
       const updated: Record<string, any> = {};
@@ -70,49 +66,49 @@ export default function MultiChatPanel({ selectedInstances, onStream, onStop, in
 
     setInput('');
 
-    const streamPromises = selectedInstances.map(async (instance) => {
+    selectedInstances.forEach(instance => {
       if (!instance.id) return;
       const instanceId = instance.id;
       let fullContent = '';
-      try {
-        for await (const chunk of onStream(instanceId, input)) {
-          fullContent += chunk;
+      
+      (async () => {
+        try {
+          for await (const chunk of onStreamRef.current(instanceId, currentInput)) {
+            fullContent += chunk;
+            setAllSessions(prev => ({
+              ...prev,
+              [instanceId]: {
+                ...prev[instanceId],
+                streamContent: fullContent
+              }
+            }));
+          }
+
+          const assistantMessage: Message = { role: 'assistant', content: fullContent, timestamp: new Date() };
           setAllSessions(prev => ({
             ...prev,
             [instanceId]: {
               ...prev[instanceId],
-              streamContent: fullContent
+              messages: [...(prev[instanceId]?.messages || []), assistantMessage],
+              streamContent: '',
+              isStreaming: false
             }
           }));
-          scrollToBottom(instanceId);
+        } catch (error: any) {
+          const errorMsg = error?.message === 'Request cancelled' ? '已停止' : `错误: ${error.message}`;
+          const assistantMessage: Message = { role: 'assistant', content: fullContent || errorMsg, timestamp: new Date() };
+          setAllSessions(prev => ({
+            ...prev,
+            [instanceId]: {
+              ...prev[instanceId],
+              messages: fullContent ? [...(prev[instanceId]?.messages || []), assistantMessage] : (prev[instanceId]?.messages || []),
+              streamContent: '',
+              isStreaming: false
+            }
+          }));
         }
-
-        const assistantMessage: Message = { role: 'assistant', content: fullContent, timestamp: new Date() };
-        setAllSessions(prev => ({
-          ...prev,
-          [instanceId]: {
-            ...prev[instanceId],
-            messages: [...(prev[instanceId]?.messages || []), assistantMessage],
-            streamContent: '',
-            isStreaming: false
-          }
-        }));
-      } catch (error: any) {
-        const errorMsg = error?.message === 'Request cancelled' ? '已停止' : `错误: ${error.message}`;
-        const assistantMessage: Message = { role: 'assistant', content: fullContent || errorMsg, timestamp: new Date() };
-        setAllSessions(prev => ({
-          ...prev,
-          [instanceId]: {
-            ...prev[instanceId],
-            messages: fullContent ? [...(prev[instanceId]?.messages || []), assistantMessage] : (prev[instanceId]?.messages || []),
-            streamContent: '',
-            isStreaming: false
-          }
-        }));
-      }
+      })();
     });
-
-    await Promise.all(streamPromises);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -123,7 +119,7 @@ export default function MultiChatPanel({ selectedInstances, onStream, onStop, in
   };
 
   const handleStop = (id: string) => {
-    onStop(id);
+    onStopRef.current(id);
     setAllSessions(prev => ({
       ...prev,
       [id]: {
@@ -149,65 +145,17 @@ export default function MultiChatPanel({ selectedInstances, onStream, onStop, in
             {selectedInstances.map((instance) => {
               if (!instance.id) return null;
               const session = allSessions[instance.id] || { messages: [], streamContent: '', isStreaming: false };
-              const status = instanceStatuses[instance.id] || 'idle';
-              const isThisStreaming = status === 'loading';
+              const isStreaming = instanceStatuses[instance.id] === 'loading';
 
               return (
-                <div key={instance.id} className="flex flex-col bg-surface-container-low rounded-lg h-[600px] border border-surface-container-high">
-                  <div className="px-4 py-3 bg-surface-container shrink-0 h-14 rounded-t-lg">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-sm text-on-surface truncate">
-                          {instance.name}
-                        </h3>
-                        <p className="text-xs text-on-surface-variant truncate">
-                          {instance.provider} · {instance.model}
-                        </p>
-                      </div>
-                      {isThisStreaming && (
-                        <button
-                          onClick={() => handleStop(instance.id)}
-                          className="shrink-0 ml-2 p-1.5 rounded-md bg-error/20 hover:bg-error/30 text-error transition-colors"
-                          title="停止"
-                        >
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                            <rect x="6" y="6" width="12" height="12" rx="2" />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex-1 p-4 space-y-3 overflow-y-auto">
-                    {session.messages.map((message, index) => (
-                      <div
-                        key={index}
-                        className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                      >
-                        <div
-                          className={`max-w-[90%] rounded-lg p-3 text-sm ${
-                            message.role === 'user'
-                              ? 'gradient-primary text-on-primary'
-                              : 'bg-surface-container'
-                          }`}
-                        >
-                          <MarkdownRenderer content={message.content} />
-                        </div>
-                      </div>
-                    ))}
-
-                    {session.isStreaming && session.streamContent && (
-                      <div className="flex justify-start">
-                        <div className="max-w-[90%] rounded-lg p-3 text-sm bg-surface-container">
-                          <MarkdownRenderer content={session.streamContent} />
-                          <span className="inline-block w-2 h-4 bg-primary animate-pulse ml-1" />
-                        </div>
-                      </div>
-                    )}
-
-                    <div ref={(el) => { messagesEndRefs.current[instance.id] = el; }} />
-                  </div>
-                </div>
+                <ChatPane
+                  key={instance.id}
+                  instance={instance}
+                  messages={session.messages}
+                  streamContent={session.streamContent}
+                  isStreaming={isStreaming}
+                  onStop={() => handleStop(instance.id)}
+                />
               );
             })}
           </div>

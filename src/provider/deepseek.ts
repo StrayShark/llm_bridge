@@ -43,8 +43,14 @@ export const deepseekProvider: ProviderAdapter = {
 
   parseResponse(response: any): GenerateResult {
     const choice = response.choices?.[0];
+    let content = choice?.message?.content || '';
+    
+    if (choice?.message?.reasoning_content) {
+      content = `**思考过程:**\n${choice.message.reasoning_content}\n\n---\n\n**回答:**\n${content}`;
+    }
+    
     return {
-      content: choice?.message?.content || '',
+      content,
       usage: response.usage ? {
         promptTokens: response.usage.prompt_tokens,
         completionTokens: response.usage.completion_tokens,
@@ -62,6 +68,8 @@ export const deepseekProvider: ProviderAdapter = {
 
     const decoder = new TextDecoder();
     let buffer = '';
+    let thinkingBuffer = '';
+    let inThinking = false;
 
     try {
       while (true) {
@@ -79,13 +87,34 @@ export const deepseekProvider: ProviderAdapter = {
           if (trimmed.startsWith('data: ')) {
             try {
               const data = JSON.parse(trimmed.slice(6));
-              const content = data.choices?.[0]?.delta?.content;
-              if (content) yield content;
+              const delta = data.choices?.[0]?.delta;
+              
+              const content = delta?.content;
+              const reasoningContent = delta?.reasoning_content;
+              
+              if (reasoningContent !== undefined && reasoningContent !== null) {
+                thinkingBuffer += reasoningContent;
+                inThinking = true;
+              }
+              
+              if (content !== undefined && content !== null && content !== '') {
+                if (inThinking && thinkingBuffer) {
+                  yield `\n\n**思考过程:**\n${thinkingBuffer}\n\n---\n\n**回答:**\n${content}`;
+                  thinkingBuffer = '';
+                  inThinking = false;
+                } else {
+                  yield content;
+                }
+              }
             } catch {
               // Skip invalid JSON
             }
           }
         }
+      }
+      
+      if (thinkingBuffer && !inThinking) {
+        yield `\n\n**思考过程:**\n${thinkingBuffer}`;
       }
     } finally {
       reader.releaseLock();

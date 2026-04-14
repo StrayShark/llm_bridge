@@ -20,6 +20,7 @@ export interface ModelConfig {
   id: string
   name: string
   paramRanges?: Partial<ParamRanges>
+  supportsThinking?: boolean
 }
 
 export interface ParamRanges {
@@ -58,6 +59,15 @@ const MINIMAX_PARAM_RANGES: ParamRanges = {
   supportsSeed: true
 };
 
+const ZHIPU_PARAM_RANGES: ParamRanges = {
+  temperature: { min: 0, max: 1, default: 1 },
+  topP: { min: 0, max: 1, default: 0.95 },
+  presencePenalty: { min: -2, max: 2, default: 0 },
+  frequencyPenalty: { min: -2, max: 2, default: 0 },
+  supportsResponseFormat: true,
+  supportsSeed: true
+};
+
 export const PROVIDERS: ProviderConfig[] = [
   {
     id: ProviderEnum.OpenAI,
@@ -84,7 +94,7 @@ export const PROVIDERS: ProviderConfig[] = [
       { id: 'deepseek-v3.2', name: 'DeepSeek V3.2' },
       { id: 'deepseek-chat', name: 'DeepSeek Chat' },
       { id: 'deepseek-coder', name: 'DeepSeek Coder' },
-      { id: 'deepseek-r1', name: 'DeepSeek R1' }
+      { id: 'deepseek-r1', name: 'DeepSeek R1', supportsThinking: true }
     ]
   },
   {
@@ -133,17 +143,10 @@ export const PROVIDERS: ProviderConfig[] = [
     id: ProviderEnum.Zhipu,
     name: '智谱AI (GLM)',
     defaultEndpoint: 'https://open.bigmodel.cn/api/paas/v4',
-    paramRanges: {
-      temperature: { min: 0, max: 1, default: 1 },
-      topP: { min: 0, max: 1, default: 0.95 },
-      presencePenalty: { min: -2, max: 2, default: 0 },
-      frequencyPenalty: { min: -2, max: 2, default: 0 },
-      supportsResponseFormat: true,
-      supportsSeed: true
-    },
+    paramRanges: ZHIPU_PARAM_RANGES,
     models: [
-      { id: 'glm-5.1', name: 'GLM-5.1' },
-      { id: 'glm-5', name: 'GLM-5' },
+      { id: 'glm-5.1', name: 'GLM-5.1', supportsThinking: true },
+      { id: 'glm-5', name: 'GLM-5', supportsThinking: true },
       { id: 'glm-4-plus', name: 'GLM-4 Plus' },
       { id: 'glm-4', name: 'GLM-4' },
       { id: 'glm-4-air', name: 'GLM-4 Air' },
@@ -187,4 +190,12 @@ export function getParamRanges(providerId: string, modelId?: string): ParamRange
   }
 
   return provider.paramRanges || DEFAULT_PARAM_RANGES;
+}
+
+export function modelSupportsThinking(providerId: string, modelId: string): boolean {
+  const provider = getProvider(providerId);
+  if (!provider) return false;
+  
+  const model = provider.models.find(m => m.id === modelId);
+  return model?.supportsThinking ?? false;
 }

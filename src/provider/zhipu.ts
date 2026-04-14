@@ -33,6 +33,10 @@ export const zhipuProvider: ProviderAdapter = {
     if (opts.seed !== undefined) body.seed = opts.seed;
     if (opts.responseFormat) body.response_format = { type: opts.responseFormat };
 
+    if (model.startsWith('glm-5')) {
+      body.thinking = { type: 'enabled' };
+    }
+
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${config.apiKey}`
@@ -51,8 +55,14 @@ export const zhipuProvider: ProviderAdapter = {
 
   parseResponse(response: any): GenerateResult {
     const choice = response.choices?.[0];
+    let content = choice?.message?.content || '';
+    
+    if (choice?.message?.thinking) {
+      content = `**思考过程:**\n${choice.message.thinking}\n\n---\n\n**回答:**\n${content}`;
+    }
+    
     return {
-      content: choice?.message?.content || '',
+      content,
       usage: response.usage ? {
         promptTokens: response.usage.prompt_tokens,
         completionTokens: response.usage.completion_tokens,
@@ -70,6 +80,8 @@ export const zhipuProvider: ProviderAdapter = {
 
     const decoder = new TextDecoder();
     let buffer = '';
+    let thinkingStarted = false;
+    let contentStarted = false;
 
     try {
       while (true) {
@@ -87,8 +99,31 @@ export const zhipuProvider: ProviderAdapter = {
           if (trimmed.startsWith('data: ')) {
             try {
               const data = JSON.parse(trimmed.slice(6));
-              const content = data.choices?.[0]?.delta?.content;
-              if (content) yield content;
+              const delta = data.choices?.[0]?.delta;
+              
+              const content = delta?.content;
+              const reasoningContent = delta?.reasoning_content;
+              
+              if (reasoningContent && reasoningContent.length > 0) {
+                if (!thinkingStarted) {
+                  yield `<thinking>${reasoningContent}`;
+                  thinkingStarted = true;
+                } else {
+                  yield reasoningContent;
+                }
+              }
+              
+              if (content && content.length > 0) {
+                if (thinkingStarted && !contentStarted) {
+                  yield `</thinking>\n\n**回答:**\n${content}`;
+                  contentStarted = true;
+                } else if (!contentStarted) {
+                  contentStarted = true;
+                  yield content;
+                } else {
+                  yield content;
+                }
+              }
             } catch {
               // Skip invalid JSON
             }
